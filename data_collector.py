@@ -1,5 +1,6 @@
-import cv2
+import cv2, os
 import mediapipe as mp
+import pandas as pd
 
 # Initialize MediaPipe Hand Landmark model
 mp_hands = mp.solutions.hands
@@ -10,7 +11,14 @@ hands = mp_hands.Hands(
 # Start video stream
 cap = cv2.VideoCapture(0)
 
+# Identify which folder to write data too and make path if needed
+data_folder = input("What folder do you want to write to: ")
+
+if not os.path.exists(f"{data_folder}/"):
+    os.mkdir(f"{data_folder}/")
+
 # Loop indefinitely
+file_number = 0
 while True:
     # Read frame from the video stream
     ret, frame = cap.read()
@@ -22,9 +30,18 @@ while True:
     frame = cv2.flip(frame, 1)
     results = hands.process(frame)
 
+    # Set up filler info
+    landmark_ids = [str(i) for i in range(21)]
+    coords = [(0, 0) for i in range(21)]
+    data_row = dict(zip(landmark_ids, coords))
+
     # Draw landmarks on the frame if detected
     if results.multi_hand_landmarks:
-        data = {}
+        
+        # Container of hand data
+        data = {"Left": data_row.copy(), "Right": data_row.copy()}
+
+        # Loop through each hand's landmarks
         for hand_landmarks, handedness in zip(results.multi_hand_landmarks, results.multi_handedness):
             if hand_landmarks:
                 # Get the handedness (left or right) for the current hand
@@ -47,10 +64,15 @@ while True:
                     cv2.putText(frame, str(id), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
                     # Save the landmarks
-                    data[hand_label][id] = (x, y)
+                    data[hand_label][str(id)] = (x, y)
 
-        print(data)
-
+        # Convert the nested dict to a DataFrame
+        dataframe = pd.DataFrame.from_dict({i: data[i] for i in data.keys()}, orient='index')
+        dataframe.columns = dataframe.columns.astype(str)
+        
+        # Save the DataFrame as a parquet file
+        dataframe.to_parquet(f"{data_folder}/{data_folder}_{file_number}.parquet")
+        file_number += 1
 
     # Display the frame in a window
     cv2.imshow('Hand Landmarks', frame)
