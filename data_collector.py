@@ -18,10 +18,10 @@ data_folder = input("What folder do you want to write to: ")
 if not os.path.exists(f"{data_folder}/"):
     os.mkdir(f"{data_folder}/")
 
-# Loop for 20 seconds
+# Loop for 120 seconds
 file_number = 0
 start_time = time.time()
-while time.time() - start_time < 20:
+while time.time() - start_time < 120:
     # Read frame from the video stream
     ret, frame = cap.read()
     if not ret:
