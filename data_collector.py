@@ -63,13 +63,13 @@ while True:
                     # Display landmark ID number next to the landmark point
                     cv2.putText(frame, str(id), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
-                    # Save the landmarks
-                    data[hand_label][str(id)] = (x, y)
+                    # Save the normalized landmarks
+                    data[hand_label][str(id)] = (max(0, x / frame.shape[1]), max(0, y / frame.shape[0]))
 
         # Convert the nested dict to a DataFrame
         dataframe = pd.DataFrame.from_dict({i: data[i] for i in data.keys()}, orient='index')
         dataframe.columns = dataframe.columns.astype(str)
-        
+
         # Save the DataFrame as a parquet file
         dataframe.to_parquet(f"{data_folder}/{data_folder}_{file_number}.parquet")
         file_number += 1
