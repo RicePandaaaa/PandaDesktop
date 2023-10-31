@@ -1,6 +1,7 @@
 import cv2, os
 import mediapipe as mp
 import pandas as pd
+import time
 
 # Initialize MediaPipe Hand Landmark model
 mp_hands = mp.solutions.hands
@@ -17,9 +18,10 @@ data_folder = input("What folder do you want to write to: ")
 if not os.path.exists(f"{data_folder}/"):
     os.mkdir(f"{data_folder}/")
 
-# Loop indefinitely
+# Loop for 20 seconds
 file_number = 0
-while True:
+start_time = time.time()
+while time.time() - start_time < 20:
     # Read frame from the video stream
     ret, frame = cap.read()
     if not ret:
@@ -32,14 +34,15 @@ while True:
 
     # Set up filler info
     landmark_ids = [str(i) for i in range(21)]
-    coords = [(0, 0) for i in range(21)]
+    coords = [0 for i in range(21)]
     data_row = dict(zip(landmark_ids, coords))
 
     # Draw landmarks on the frame if detected
     if results.multi_hand_landmarks:
         
         # Container of hand data
-        data = {"Left": data_row.copy(), "Right": data_row.copy()}
+        data = {"LeftX": data_row.copy(), "RightX": data_row.copy(),
+                "LeftY": data_row.copy(), "RightY": data_row.copy()}
 
         # Loop through each hand's landmarks
         for hand_landmarks, handedness in zip(results.multi_hand_landmarks, results.multi_handedness):
@@ -64,7 +67,8 @@ while True:
                     cv2.putText(frame, str(id), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
                     # Save the normalized landmarks
-                    data[hand_label][str(id)] = (max(0, x / frame.shape[1]), max(0, y / frame.shape[0]))
+                    data[hand_label+"X"][str(id)] = max(0, x / frame.shape[1])
+                    data[hand_label+"Y"][str(id)] = max(0, y / frame.shape[0])
 
         # Convert the nested dict to a DataFrame
         dataframe = pd.DataFrame.from_dict({i: data[i] for i in data.keys()}, orient='index')
