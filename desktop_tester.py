@@ -16,8 +16,12 @@ cap = cv2.VideoCapture(0)
 
 loaded_model = tf.keras.models.load_model("hand_model.h5")
 
+labels = ["LEFT_ONE", "LEFT_TWO", "LEFT_THREE",
+          "RIGHT_ONE", "RIGHT_TWO", "RIGHT_THREE"]
+
 # Loop forever
 start_time = time.time()
+current_prediction = ""
 while True:
     # Read frame from the video stream
     ret, frame = cap.read()
@@ -33,6 +37,8 @@ while True:
     landmark_ids = [str(i) for i in range(21)]
     coords = [0 for i in range(21)]
     data_row = dict(zip(landmark_ids, coords))
+
+    cv2.putText(frame, current_prediction, (0, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
     # Draw landmarks on the frame if detected
     if results.multi_hand_landmarks:
@@ -52,9 +58,6 @@ while True:
                 elif hand_label == "Right":
                     color = (0, 0, 255)
 
-                # Store the landmarks per frame
-                data[hand_label] = {}
-
                 # Visualize the landmarks
                 for id, landmark in enumerate(hand_landmarks.landmark):
                     x, y = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])
@@ -67,7 +70,7 @@ while True:
                     data[hand_label+"X"][str(id)] = max(0, x / frame.shape[1])
                     data[hand_label+"Y"][str(id)] = max(0, y / frame.shape[0])
 
-        if time.time() - start_time >= 1:
+        if time.time() - start_time >= 0.5:
             # Convert the nested dict to a DataFrame
             dataframe = pd.DataFrame.from_dict({i: data[i] for i in data.keys()}, orient='index')
             dataframe.columns = dataframe.columns.astype(str)
@@ -80,13 +83,22 @@ while True:
             
             # Convert to TensorFlow tensors
             features_tensor = tf.convert_to_tensor(features_array, dtype=tf.float32)
-            all_features = tf.concat([features_tensor], axis=0)
-            features_tensor = features_tensor[:, np.newaxis, :]
+            all_features = tf.concat([[features_tensor]], axis=0)
 
-            predictions = loaded_model.predict(features_tensor)
+            predictions = loaded_model.predict(all_features)
 
-            print(predictions)
-            print("--")
+            # Format the preductions
+            predicted_indices = np.argmax(predictions, axis=-1)
+
+            # Map the indices to class labels
+            predicted_labels = [labels[index] for index in predicted_indices[0]]
+
+            # 'predicted_labels' now contains the predicted class labels for each example in the batch
+            if predicted_labels[-1].startswith("LEFT"):
+                current_prediction = predicted_labels[0]
+            else:
+                current_prediction = predicted_labels[-1]
+                
             start_time = time.time()
 
     # Display the frame in a window
