@@ -55,9 +55,6 @@ while time.time() - start_time < 120:
                 elif hand_label == "Right":
                     color = (0, 0, 255)
 
-                # Store the landmarks per frame
-                data[hand_label] = {}
-
                 # Visualize the landmarks
                 for id, landmark in enumerate(hand_landmarks.landmark):
                     x, y = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])
